@@ -1,0 +1,63 @@
+name: Get AoC Input
+on:
+  workflow_dispatch:
+    inputs:
+      day:
+        description: 'Day (e.g., 01, 15)'
+        required: true
+      year:
+        description: 'Year'
+        required: true
+        default: '2025'
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-input:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download Input
+        env:
+          AOC_SESSION: ${{ secrets.AOC_SESSION }}
+          DAY: ${{ inputs.day }}
+          YEAR: ${{ inputs.year }}
+        run: |
+          # Remove leading zeros to prevent octal errors, then pad back to 05
+          CLEAN_DAY=$(echo $DAY | sed 's/^0*//')
+          PADDED_DAY=$(printf "%02d" $CLEAN_DAY)
+          
+          DIR_NAME="day$PADDED_DAY"
+          FILE_PATH="$DIR_NAME/input.txt"
+          
+          echo "Processing Day $PADDED_DAY of $YEAR..."
+          
+          # Create directory
+          mkdir -p "$DIR_NAME"
+          
+          # Download file
+          status=$(curl -s -w "%{http_code}" -o "$FILE_PATH" -b "session=$AOC_SESSION" "https://adventofcode.com/$YEAR/day/$CLEAN_DAY/input")
+          
+          if [ "$status" -ne 200 ]; then
+            echo "Error: Server returned status $status"
+            echo "Check that your Session Cookie is correct and the puzzle is unlocked."
+            rm -f "$FILE_PATH"
+            exit 1
+          fi
+          
+          echo "Input saved to $FILE_PATH"
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Add input for Day ${{ inputs.day }}"
+            git push
+          fi
