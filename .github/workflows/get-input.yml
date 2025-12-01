@@ -3,12 +3,16 @@ on:
   workflow_dispatch:
     inputs:
       day:
-        description: 'Day (e.g., 01, 15)'
-        required: true
+        description: 'Day (e.g., 05)'
+        required: false
       year:
         description: 'Year'
-        required: true
+        required: false
         default: '2025'
+  
+  # Run automatically at 06:01 CET on days 1 through 12 of December
+  schedule:
+    - cron: '1 5 1-12 12 *'
 
 permissions:
   contents: write
